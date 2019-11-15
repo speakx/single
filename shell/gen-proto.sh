@@ -16,6 +16,13 @@ function gen_proto() {
     if [ "$protofolder" != "" ] && [ -d "$(pwd)/$protofolder" ] ;then
         cd ./$protofolder
 
+        folders=`ls`
+		for folder in $folders; do
+            if [ -d "$(pwd)/$folder" ]; then
+                rm -rf "$(pwd)/$folder"
+            fi
+		done
+
         rm -rf ./*.proto.tmp
         protos=`ls | grep ".proto"`
 
