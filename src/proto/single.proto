@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package proto;
+package pbsingle;
 
 service SimpleServer {
   rpc SayHello (SimpleHello) returns (SimpleHelloReply) {}

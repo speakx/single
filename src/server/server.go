@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"mmapcache/cache"
 	"net"
-	pb "svrdemo/proto"
+	"single/proto/pbsingle"
 
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
@@ -15,7 +15,7 @@ import (
 
 // Server struct
 type Server struct {
-	pb.UnimplementedSimpleServerServer
+	pbsingle.UnimplementedSimpleServerServer
 	mmapCache   *cache.MMapCache
 	mmapCacheCh chan proto.Message
 }
@@ -39,7 +39,7 @@ func (s *Server) Run(addr string) error {
 	}
 
 	srv := grpc.NewServer()
-	pb.RegisterSimpleServerServer(srv, s)
+	pbsingle.RegisterSimpleServerServer(srv, s)
 
 	if err := srv.Serve(lis); err != nil {
 		logger.Error("failed to serve, err:", err)
@@ -48,13 +48,13 @@ func (s *Server) Run(addr string) error {
 }
 
 // SayHello implements proto.
-func (s *Server) SayHello(ctx context.Context, req *pb.SimpleHello) (*pb.SimpleHelloReply, error) {
+func (s *Server) SayHello(ctx context.Context, req *pbsingle.SimpleHello) (*pbsingle.SimpleHelloReply, error) {
 	// 网络事件处理计数器，dump会通过配置将当前服务的网络事件吞吐量提交给监控服务
 	dump.NetEventRecvIncr(0)
 	defer dump.NetEventRecvDecr(0)
 
 	// 构建回包 & 处理业务
-	reply := &pb.SimpleHelloReply{
+	reply := &pbsingle.SimpleHelloReply{
 		Transid: req.Transid,
 		Name:    req.Name,
 		Ack:     fmt.Sprintf("%v - hehe", req.Name),
@@ -81,10 +81,10 @@ func (s *Server) writeMMapCacheLoop() {
 			if nil == s.mmapCache {
 				s.mmapCache = cache.DefPoolMMapCache.Alloc()
 			}
-			if n, _ := s.mmapCache.WriteData(0x0, data, []byte(msg.(*pb.SimpleHello).Transid), msg); -1 == n {
+			if n, _ := s.mmapCache.WriteData(0x0, data, []byte(msg.(*pbsingle.SimpleHello).Transid), msg); -1 == n {
 				cache.DefPoolMMapCache.Collect(s.mmapCache)
 				s.mmapCache = cache.DefPoolMMapCache.Alloc()
-				s.mmapCache.WriteData(0x0, data, []byte(msg.(*pb.SimpleHello).Transid), msg)
+				s.mmapCache.WriteData(0x0, data, []byte(msg.(*pbsingle.SimpleHello).Transid), msg)
 			}
 		}
 	}()

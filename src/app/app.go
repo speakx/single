@@ -6,7 +6,7 @@ import (
 	"environment/logger"
 	"fmt"
 	"mmapcache/cache"
-	pb "svrdemo/proto"
+	"single/proto/pbsingle"
 	"sync"
 
 	"github.com/golang/protobuf/proto"
@@ -65,7 +65,7 @@ func (a *App) reloadMMapCache(mmapCaches []*cache.MMapCache) {
 	for idx, mmapCache := range mmapCaches {
 		logger.Info("reload mmapcache.idx:", idx, " data.count:%v", len(mmapCache.GetMMapDatas()))
 		for _, mmapData := range mmapCache.GetMMapDatas() {
-			var req pb.SimpleHello
+			var req pbsingle.SimpleHello
 			proto.Unmarshal(mmapData.GetData(), &req)
 		}
 		cache.DefPoolMMapCache.Collect(mmapCache)
