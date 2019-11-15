@@ -2,11 +2,11 @@ module single
 
 go 1.13
 
-replace environment => /Users/Kim/Documents/GitHub/speakx/environment/src
+replace environment => ../../environment/src
 
-replace mmapcache => /Users/Kim/Documents/GitHub/speakx/mmapcache/src
+replace mmapcache => ../../mmapcache/src
 
-replace svrdemo => /Users/Kim/Documents/GitHub/speakx/svrdemo1/src
+replace svrdemo => ../../svrdemo/src
 
 require (
 	environment v0.0.0-00010101000000-000000000000
