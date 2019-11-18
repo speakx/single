@@ -4,29 +4,29 @@ import (
 	"environment/cfgargs"
 	"environment/dump"
 	"environment/logger"
-	"fmt"
+	"idgenerator/database"
 	"mmapcache/cache"
-	"single/proto/pbsingle"
+	"os"
+	"single/client"
 	"sync"
-
-	"github.com/golang/protobuf/proto"
 )
 
 var once sync.Once
-var app *App
+var _app *App
 
 // GetApp 获取当前服务的App实例
 func GetApp() *App {
 	once.Do(func() {
-		app = &App{}
+		_app = &App{}
 	})
-	return app
+	return _app
 }
 
 // App 当前服务的App实例，用来存储一些运行时对象
 type App struct {
-	SrvCfg  *cfgargs.SrvConfig
-	SrvDemo SimpleGrpcClient
+	SrvCfg      *cfgargs.SrvConfig
+	DB          *database.DB
+	IDGenClient client.IDGeneratorGrpcClient
 }
 
 // InitApp 加载配置、初始化日志、构建mmap缓存池
@@ -34,26 +34,39 @@ func (a *App) InitApp(srvCfg *cfgargs.SrvConfig) {
 	a.SrvCfg = srvCfg
 
 	// 初始化日志
+	logger.Info("start init log")
 	logger.InitLogger(srvCfg.Log.Path, srvCfg.Log.Console, srvCfg.Log.Level)
+	logger.Info("end init log")
 
-	// 初始化mmap缓存池
-	logger.Info("start init mmap cache pool")
+	// 初始化dump包，用来做服务端健康度检查&汇报
+	logger.Info("start init dump, addr:", srvCfg.Dump.Addr)
+	dump.InitDump(true, srvCfg.Dump.Interval, srvCfg.Dump.Addr, nil)
+	logger.Info("end init dump")
+
+	// 初始化mmap缓存
+	logger.Info("start init mmap cache, dir:", srvCfg.Cache.Path)
 	cache.InitMMapCachePool(
 		srvCfg.Cache.Path, srvCfg.Cache.MMapSize,
 		srvCfg.Cache.DataSize, srvCfg.Cache.PreAlloc,
 		a.errorMMapCache, a.reloadMMapCache)
-	logger.Info("end init mmap cache pool")
+	logger.Info("end init mmap cache")
 
-	// 初始化所有的后端服务连接
+	// 初始化后端服务连接
 	logger.Info("start init client")
 	a.initClientSrv()
 	logger.Info("end init client")
 
-	// 初始化dump包，用来做服务端健康度检查&汇报
-	dump.InitDump(true, srvCfg.Dump.Interval, srvCfg.Dump.Addr,
-		func(recv int64, send int64, recvHandleRate int64, sendHandleRate int64) {
-			fmt.Println(sendHandleRate)
-		})
+	// 初始化DB层
+	logger.Info("start init db")
+	if err := a.initDB(); nil != err {
+		logger.Error("init db err:", err)
+		os.Exit(0)
+	}
+	logger.Info("end init db")
+
+	// 其他初始化
+	initSingleIDCache(a.SrvCfg)
+	initSingleMsgCacheMap(a.SrvCfg)
 }
 
 func (a *App) errorMMapCache(err error) {
@@ -61,18 +74,14 @@ func (a *App) errorMMapCache(err error) {
 }
 
 func (a *App) reloadMMapCache(mmapCaches []*cache.MMapCache) {
-	logger.Info("reload mmapcache.count:", len(mmapCaches))
-	for idx, mmapCache := range mmapCaches {
-		logger.Info("reload mmapcache.idx:", idx, " data.count:%v", len(mmapCache.GetMMapDatas()))
-		for _, mmapData := range mmapCache.GetMMapDatas() {
-			var req pbsingle.SimpleHello
-			proto.Unmarshal(mmapData.GetData(), &req)
-		}
-		cache.DefPoolMMapCache.Collect(mmapCache)
-	}
 }
 
 func (a *App) initClientSrv() {
-	// a.SrvDemo.Connect(a.SrvCfg.Addr)
-	a.SrvDemo.Connect("10.211.55.27:10000")
+	a.IDGenClient.Connect("10.211.55.27:10000")
+}
+
+func (a *App) initDB() error {
+	db, err := database.NewDB(a.SrvCfg)
+	a.DB = db
+	return err
 }

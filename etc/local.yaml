@@ -1,12 +1,14 @@
-addr: :10000
-name: svrdemo
+info:
+  addr: :11000
+  name: single
+  id: 0
 log:
   path: 
   console: false
   level: INFO
 cache:
   path:
-  mmapsize: 0x100000
+  mmapsize: 0x80000
   datasize: 0x2000
   prealloc: 100
 dump:

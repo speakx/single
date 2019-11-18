@@ -2,17 +2,42 @@ syntax = "proto3";
 
 package pbsingle;
 
-service SimpleServer {
-  rpc SayHello (SimpleHello) returns (SimpleHelloReply) {}
+service SingleServer {
+  rpc SendMessage(Message) returns (MessageReply) {}
+  rpc ModifyMessage(Message) returns (MessageReply) {}
+  rpc RecallMessage(Message) returns (MessageReply) {}
 }
 
-message SimpleHello {
+message Message {
   string transid = 1;
-  string name = 2;
+  uint64 clientId = 2;        // 客户端生成的消息唯一id，用来做服务端去重
+  uint64 fromUid = 3;         // 消息的发送人
+  uint64 toUid = 4;           // 消息的接收人
+  string msg = 5;             // 消息内容
+  uint32 type = 6;            // 消息类型
 }
 
-message SimpleHelloReply {
-  string transid = 1;
-  string name = 2;
-  string ack = 3;
+message MessageReply {
+  uint64 clientId = 2;
+  uint64 srvId = 3;
+  uint64 orderId = 4;
+}
+
+enum MessageStatus {
+  ORIGIN = 0;                 // 消息默认状态
+  MODIFY = 1;                 // 消息被修改过
+  RECALL = 2;                 // 消息被撤回了
+}
+
+message MessageRecord {
+  uint64 clientId = 1;
+  uint64 srvId = 2;           // 服务端消息唯一id，消息唯一标识符号
+  uint64 orderId = 3;         // 消息排序id，在会话中单调递增（不保证连续）
+  uint64 create = 4;          // create timestamp
+  uint64 update = 5;          // update timestamp
+  uint64 fromUid = 6;         // 消息的发送人
+  uint64 toUid = 7;           // 消息的接收人
+  string msg = 8;             // 消息内容
+  uint32 type = 9;            // 消息类型
+  MessageStatus status = 10;
 }

@@ -4,10 +4,12 @@ import (
 	"context"
 	"environment/dump"
 	"environment/logger"
-	"fmt"
-	"mmapcache/cache"
 	"net"
+	"single/app"
 	"single/proto/pbsingle"
+	"strconv"
+	"sync"
+	"time"
 
 	"github.com/golang/protobuf/proto"
 	"google.golang.org/grpc"
@@ -15,17 +17,13 @@ import (
 
 // Server struct
 type Server struct {
-	pbsingle.UnimplementedSimpleServerServer
-	mmapCache   *cache.MMapCache
-	mmapCacheCh chan proto.Message
+	pbsingle.UnimplementedSingleServerServer
+	sync.Mutex
 }
 
 // NewServer new
 func NewServer() *Server {
-	s := &Server{
-		mmapCacheCh: make(chan proto.Message, 0x1000),
-	}
-	s.writeMMapCacheLoop()
+	s := &Server{}
 	return s
 }
 
@@ -39,7 +37,7 @@ func (s *Server) Run(addr string) error {
 	}
 
 	srv := grpc.NewServer()
-	pbsingle.RegisterSimpleServerServer(srv, s)
+	pbsingle.RegisterSingleServerServer(srv, s)
 
 	if err := srv.Serve(lis); err != nil {
 		logger.Error("failed to serve, err:", err)
@@ -47,45 +45,60 @@ func (s *Server) Run(addr string) error {
 	return err
 }
 
-// SayHello implements proto.
-func (s *Server) SayHello(ctx context.Context, req *pbsingle.SimpleHello) (*pbsingle.SimpleHelloReply, error) {
+// SendMessage implements proto.
+func (s *Server) SendMessage(ctx context.Context, req *pbsingle.Message) (*pbsingle.MessageReply, error) {
+	logger.Debug("SendMessage transid:", req.Transid)
+	s.Lock()
+	defer s.Unlock()
+
 	// 网络事件处理计数器，dump会通过配置将当前服务的网络事件吞吐量提交给监控服务
 	dump.NetEventRecvIncr(0)
 	defer dump.NetEventRecvDecr(0)
 
-	// 构建回包 & 处理业务
-	reply := &pbsingle.SimpleHelloReply{
-		Transid: req.Transid,
-		Name:    req.Name,
-		Ack:     fmt.Sprintf("%v - hehe", req.Name),
+	idCache := app.GetSingleIDCache(req.FromUid, req.ToUid)
+	mmapCache := app.GetSingleMsgCache(req.FromUid, req.ToUid)
+
+	// Gen Message Record
+	srvid, orderid := idCache.PopID()
+	msgRec := &pbsingle.MessageRecord{
+		ClientId: req.ClientId,
+		SrvId:    srvid,
+		OrderId:  orderid,
+		Create:   uint64(time.Now().Unix()),
+		FromUid:  req.FromUid,
+		ToUid:    req.ToUid,
+		Msg:      req.Msg,
+		Type:     req.Type,
+		Status:   pbsingle.MessageStatus_ORIGIN,
 	}
 
-	s.mmapCacheCh <- req
-	return reply, nil
+	// Store
+	data, err := proto.Marshal(msgRec)
+	if nil != err {
+		logger.Error("SendMessage transid:", req.Transid, " proto.Marshal err:", err)
+		return nil, err
+	}
+	n, err := mmapCache.WriteData(0, data, []byte(strconv.FormatUint(msgRec.SrvId, 10)), msgRec)
+	if nil != err {
+		logger.Error("SendMessage transid:", req.Transid, " mmapCache.WriteData n:", n, " err:", err)
+		return nil, err
+	}
+
+	return nil, nil
 }
 
-func (s *Server) writeMMapCacheLoop() {
-	go func() {
-		for {
-			msg, ok := <-s.mmapCacheCh
-			if false == ok {
-				return
-			}
+// ModifyMessage implements proto.
+func (s *Server) ModifyMessage(ctx context.Context, req *pbsingle.Message) (*pbsingle.MessageReply, error) {
+	// 网络事件处理计数器，dump会通过配置将当前服务的网络事件吞吐量提交给监控服务
+	dump.NetEventRecvIncr(0)
+	defer dump.NetEventRecvDecr(0)
+	return nil, nil
+}
 
-			data, err := proto.Marshal(msg)
-			if nil != err {
-				logger.Error("proto marshal err:", err)
-				continue
-			}
-
-			if nil == s.mmapCache {
-				s.mmapCache = cache.DefPoolMMapCache.Alloc()
-			}
-			if n, _ := s.mmapCache.WriteData(0x0, data, []byte(msg.(*pbsingle.SimpleHello).Transid), msg); -1 == n {
-				cache.DefPoolMMapCache.Collect(s.mmapCache)
-				s.mmapCache = cache.DefPoolMMapCache.Alloc()
-				s.mmapCache.WriteData(0x0, data, []byte(msg.(*pbsingle.SimpleHello).Transid), msg)
-			}
-		}
-	}()
+// RecallMessage implements proto.
+func (s *Server) RecallMessage(ctx context.Context, req *pbsingle.Message) (*pbsingle.MessageReply, error) {
+	// 网络事件处理计数器，dump会通过配置将当前服务的网络事件吞吐量提交给监控服务
+	dump.NetEventRecvIncr(0)
+	defer dump.NetEventRecvDecr(0)
+	return nil, nil
 }

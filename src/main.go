@@ -2,13 +2,9 @@ package main
 
 import (
 	"environment/cfgargs"
-	"environment/dump"
 	"fmt"
 	"single/app"
-	"single/proto/pbsingle"
 	"single/server"
-
-	uuid "github.com/satori/go.uuid"
 )
 
 var (
@@ -16,16 +12,6 @@ var (
 )
 
 func main() {
-	// // 这段是测试代码为了demo rpc调用与mmapcache START
-	// go func() {
-	// 	for i := 0; i < 5; i++ {
-	// 		<-time.After(time.Second)
-	// 		fmt.Printf("wait for start test rpg client(%v)...\n", i)
-	// 	}
-	// 	exampleGrpcClient()
-	// }()
-	// // 这段是测试代码为了demo rpc调用与mmapcache END
-
 	srvCfg, err := cfgargs.InitSrvConfig(BuildVersion, func() {
 		// user flag binding code
 	})
@@ -36,27 +22,5 @@ func main() {
 	app.GetApp().InitApp(srvCfg)
 
 	srv := server.NewServer()
-	srv.Run(srvCfg.Addr)
-}
-
-func exampleGrpcClient() {
-	for index := 0; index < 100; index++ {
-		go func() {
-			for {
-				dump.NetEventSendIncr(0)
-				transid := uuid.NewV1()
-				req := &pbsingle.SimpleHello{
-					Transid: transid.String(),
-					Name:    "name",
-				}
-
-				srv := app.GetApp().SrvDemo
-				sayHelloResponse, err := srv.SayHello(srv.GetCtx(), req)
-				if nil != err {
-					fmt.Printf("resp:%v err:%v\n", sayHelloResponse, err)
-				}
-				dump.NetEventSendDecr(0)
-			}
-		}()
-	}
+	srv.Run(srvCfg.Info.Addr)
 }
