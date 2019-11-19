@@ -8,13 +8,9 @@ replace idgenerator => ../../idgenerator/src
 
 replace mmapcache => ../../mmapcache/src
 
-replace svrdemo => ../../svrdemo/src
-
 require (
 	environment v0.0.0-00010101000000-000000000000
 	github.com/golang/protobuf v1.3.2
-	github.com/satori/go.uuid v1.2.0
 	google.golang.org/grpc v1.25.1
-	idgenerator v0.0.0-00010101000000-000000000000
 	mmapcache v0.0.0-00010101000000-000000000000
 )

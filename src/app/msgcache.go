@@ -25,11 +25,12 @@ func initSingleMsgCacheMap(cfg *cfgargs.SrvConfig) {
 
 // GetSingleMsgCache 获取单人消息的mmap缓存，通过缓存批量写入后端DB
 func GetSingleMsgCache(fromUID, toUID uint64) *cache.MMapCache {
-	key := fmt.Sprint("%v_%v", fromUID, toUID)
+	key := fmt.Sprintf("%d_%d", fromUID, toUID)
 	mmapCache, _ := singleMsgCacheMap[key]
 	if nil == mmapCache {
 		mmapCache = cache.DefPoolMMapCache.Alloc()
 		mmapCache.SetStatus(mmapStatusUseing)
+
 		singleMsgCacheMap[key] = mmapCache
 	}
 
@@ -41,6 +42,7 @@ func GetSingleMsgCache(fromUID, toUID uint64) *cache.MMapCache {
 
 		mmapCache = cache.DefPoolMMapCache.Alloc()
 		mmapCache.SetStatus(mmapStatusUseing)
+
 		singleMsgCacheMap[key] = mmapCache
 	}
 
@@ -50,8 +52,8 @@ func GetSingleMsgCache(fromUID, toUID uint64) *cache.MMapCache {
 func savingMsgCacheloop() {
 	for {
 		mmapCache, _ := <-mmapCacheSaveCh
-		mmapCache.SetStatus(mmapStatusCollect)
 
+		mmapCache.SetStatus(mmapStatusCollect)
 		cache.DefPoolMMapCache.Collect(mmapCache)
 	}
 }

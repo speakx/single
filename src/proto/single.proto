@@ -8,13 +8,19 @@ service SingleServer {
   rpc RecallMessage(Message) returns (MessageReply) {}
 }
 
+enum MessageStatus {
+  ORIGIN = 0;                 // 消息默认状态
+  MODIFY = 1;                 // 消息被修改过
+  RECALL = 2;                 // 消息被撤回了
+}
+
 message Message {
   string transid = 1;
   uint64 clientId = 2;        // 客户端生成的消息唯一id，用来做服务端去重
   uint64 fromUid = 3;         // 消息的发送人
   uint64 toUid = 4;           // 消息的接收人
   string msg = 5;             // 消息内容
-  uint32 type = 6;            // 消息类型
+  uint32 type = 6;            // 消息业务类型
 }
 
 message MessageReply {
@@ -23,21 +29,14 @@ message MessageReply {
   uint64 orderId = 4;
 }
 
-enum MessageStatus {
-  ORIGIN = 0;                 // 消息默认状态
-  MODIFY = 1;                 // 消息被修改过
-  RECALL = 2;                 // 消息被撤回了
-}
-
 message MessageRecord {
   uint64 clientId = 1;
   uint64 srvId = 2;           // 服务端消息唯一id，消息唯一标识符号
-  uint64 orderId = 3;         // 消息排序id，在会话中单调递增（不保证连续）
-  uint64 create = 4;          // create timestamp
-  uint64 update = 5;          // update timestamp
-  uint64 fromUid = 6;         // 消息的发送人
-  uint64 toUid = 7;           // 消息的接收人
-  string msg = 8;             // 消息内容
-  uint32 type = 9;            // 消息类型
-  MessageStatus status = 10;
+  uint64 create = 3;          // create timestamp
+  uint64 update = 4;          // update timestamp
+  uint64 fromUid = 5;         // 消息的发送人
+  uint64 toUid = 6;           // 消息的接收人
+  string msg = 7;             // 消息内容
+  uint32 type = 8;            // 消息业务类型
+  MessageStatus status = 9;   // 消息在服务端的状态
 }

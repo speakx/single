@@ -1,6 +1,8 @@
 package database
 
-import "environment/cfgargs"
+import (
+	"environment/cfgargs"
+)
 
 // DB 数据库+缓存
 type DB struct {
@@ -9,9 +11,9 @@ type DB struct {
 // NewDB create
 func NewDB(cfg *cfgargs.SrvConfig) (*DB, error) {
 	db := &DB{}
-	return db, db.init(cfg.DB.Path)
+	return db, db.init(cfg)
 }
 
-func (d *DB) init(dbPath string) error {
+func (d *DB) init(cfg *cfgargs.SrvConfig) error {
 	return nil
 }

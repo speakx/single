@@ -48,22 +48,15 @@ func (s *Server) Run(addr string) error {
 // SendMessage implements proto.
 func (s *Server) SendMessage(ctx context.Context, req *pbsingle.Message) (*pbsingle.MessageReply, error) {
 	logger.Debug("SendMessage transid:", req.Transid)
-	s.Lock()
-	defer s.Unlock()
 
 	// 网络事件处理计数器，dump会通过配置将当前服务的网络事件吞吐量提交给监控服务
 	dump.NetEventRecvIncr(0)
 	defer dump.NetEventRecvDecr(0)
 
-	idCache := app.GetSingleIDCache(req.FromUid, req.ToUid)
-	mmapCache := app.GetSingleMsgCache(req.FromUid, req.ToUid)
-
 	// Gen Message Record
-	srvid, orderid := idCache.PopID()
 	msgRec := &pbsingle.MessageRecord{
 		ClientId: req.ClientId,
-		SrvId:    srvid,
-		OrderId:  orderid,
+		SrvId:    app.MakeSrvMsgID(req.FromUid, req.ToUid),
 		Create:   uint64(time.Now().Unix()),
 		FromUid:  req.FromUid,
 		ToUid:    req.ToUid,
@@ -73,18 +66,26 @@ func (s *Server) SendMessage(ctx context.Context, req *pbsingle.Message) (*pbsin
 	}
 
 	// Store
+	s.Lock()
+	mmapCache := app.GetSingleMsgCache(req.FromUid, req.ToUid)
 	data, err := proto.Marshal(msgRec)
 	if nil != err {
 		logger.Error("SendMessage transid:", req.Transid, " proto.Marshal err:", err)
+		s.Unlock()
 		return nil, err
 	}
 	n, err := mmapCache.WriteData(0, data, []byte(strconv.FormatUint(msgRec.SrvId, 10)), msgRec)
 	if nil != err {
 		logger.Error("SendMessage transid:", req.Transid, " mmapCache.WriteData n:", n, " err:", err)
+		s.Unlock()
 		return nil, err
 	}
+	s.Unlock()
 
-	return nil, nil
+	return &pbsingle.MessageReply{
+		ClientId: msgRec.ClientId,
+		SrvId:    msgRec.SrvId,
+	}, nil
 }
 
 // ModifyMessage implements proto.

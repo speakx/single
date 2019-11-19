@@ -4,10 +4,9 @@ import (
 	"environment/cfgargs"
 	"environment/dump"
 	"environment/logger"
-	"idgenerator/database"
 	"mmapcache/cache"
 	"os"
-	"single/client"
+	"single/database"
 	"sync"
 )
 
@@ -24,9 +23,8 @@ func GetApp() *App {
 
 // App 当前服务的App实例，用来存储一些运行时对象
 type App struct {
-	SrvCfg      *cfgargs.SrvConfig
-	DB          *database.DB
-	IDGenClient client.IDGeneratorGrpcClient
+	SrvCfg *cfgargs.SrvConfig
+	DB     *database.DB
 }
 
 // InitApp 加载配置、初始化日志、构建mmap缓存池
@@ -53,7 +51,10 @@ func (a *App) InitApp(srvCfg *cfgargs.SrvConfig) {
 
 	// 初始化后端服务连接
 	logger.Info("start init client")
-	a.initClientSrv()
+	if err := a.initClientSrv(); nil != err {
+		logger.Error("init client err:", err)
+		os.Exit(0)
+	}
 	logger.Info("end init client")
 
 	// 初始化DB层
@@ -65,7 +66,6 @@ func (a *App) InitApp(srvCfg *cfgargs.SrvConfig) {
 	logger.Info("end init db")
 
 	// 其他初始化
-	initSingleIDCache(a.SrvCfg)
 	initSingleMsgCacheMap(a.SrvCfg)
 }
 
@@ -76,8 +76,8 @@ func (a *App) errorMMapCache(err error) {
 func (a *App) reloadMMapCache(mmapCaches []*cache.MMapCache) {
 }
 
-func (a *App) initClientSrv() {
-	a.IDGenClient.Connect("10.211.55.27:10000")
+func (a *App) initClientSrv() error {
+	return nil
 }
 
 func (a *App) initDB() error {
