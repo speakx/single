@@ -6,6 +6,7 @@ import (
 	"environment/logger"
 	"mmapcache/cache"
 	"os"
+	"single/client"
 	"single/database"
 	"sync"
 )
@@ -23,8 +24,9 @@ func GetApp() *App {
 
 // App 当前服务的App实例，用来存储一些运行时对象
 type App struct {
-	SrvCfg *cfgargs.SrvConfig
-	DB     *database.DB
+	SrvCfg   *cfgargs.SrvConfig
+	DB       *database.DB
+	SingleDB client.SingleGrpcClient
 }
 
 // InitApp 加载配置、初始化日志、构建mmap缓存池
@@ -77,6 +79,7 @@ func (a *App) reloadMMapCache(mmapCaches []*cache.MMapCache) {
 }
 
 func (a *App) initClientSrv() error {
+	a.SingleDB.Connect(":10101")
 	return nil
 }
 
