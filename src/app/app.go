@@ -26,7 +26,7 @@ func GetApp() *App {
 type App struct {
 	SrvCfg   *cfgargs.SrvConfig
 	DB       *database.DB
-	SingleDB client.SingleGrpcClient
+	SingleDB client.SingleDBGrpcClient
 }
 
 // InitApp 加载配置、初始化日志、构建mmap缓存池

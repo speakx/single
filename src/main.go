@@ -4,7 +4,7 @@ import (
 	"environment/cfgargs"
 	"fmt"
 	"single/app"
-	"single/server"
+	"single/genserver"
 )
 
 var (
@@ -21,6 +21,7 @@ func main() {
 	}
 	app.GetApp().InitApp(srvCfg)
 
-	srv := server.NewServer()
-	srv.Run(srvCfg.Info.Addr)
+	// srv := server.NewServer()
+	// srv.Run(srvCfg.Info.Addr)
+	genserver.TestCodecServe(srvCfg.Info.Addr, true, false, nil)
 }

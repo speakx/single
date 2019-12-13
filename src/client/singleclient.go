@@ -5,14 +5,14 @@ import (
 	"singledb/proto/pbsingledb"
 )
 
-// SingleGrpcClient simpeclient
-type SingleGrpcClient struct {
+// SingleDBGrpcClient simpeclient
+type SingleDBGrpcClient struct {
 	srvinstance.GrpcClient
 	pbsingledb.SingleDBServerClient
 }
 
 // Connect connect
-func (s *SingleGrpcClient) Connect(addr string) error {
+func (s *SingleDBGrpcClient) Connect(addr string) error {
 	err := s.GrpcClient.Connect(addr)
 	if nil != err {
 		return err

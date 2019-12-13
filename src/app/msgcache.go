@@ -57,6 +57,7 @@ func GetSingleMsgCache(fromUID, toUID uint64) (*cache.MMapCache, error) {
 }
 
 func saveMsgCache(mmapCache *cache.MMapCache) error {
+	logger.Debug("mmap cache save len:", len(mmapCache.GetMMapDatas()))
 	dump.NetEventSendIncr(0)
 	key := mmapCache.GetMMapDatas()[len(mmapCache.GetMMapDatas())-1].GetKey()
 	req := &pbsingledb.SingleMsgChunk{
